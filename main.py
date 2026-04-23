@@ -227,6 +227,18 @@ async def save_booking(booking: BookingRequest):
     try:
         sheet = get_sheet()
 
+        # ── Auto convert today/tomorrow to real date ──
+        from datetime import timedelta
+        today    = datetime.now().strftime("%d-%b-%Y")
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
+
+        if booking.date.lower().strip() == "today":
+            booking.date = today
+        elif booking.date.lower().strip() == "tomorrow":
+            booking.date = tomorrow
+
+        # 1. Check duplicate
+
         # 1. Check duplicate
         if is_duplicate(sheet, booking.phonenumber, booking.date, booking.start_time, booking.service):
             return JSONResponse(
