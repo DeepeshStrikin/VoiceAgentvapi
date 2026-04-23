@@ -239,6 +239,10 @@ async def save_booking(request: Request):
                 tool_call_id = msg["toolWithToolCallList"][0]["toolCall"].get("id")
                 args = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
 
+        # Handle Vapi empty ping/healthcheck requests
+        if not args:
+            return JSONResponse(status_code=200, content={"status": "ping_ok"})
+
         # Parse into our Pydantic model to validate
         booking = BookingRequest(**args)
 
@@ -320,6 +324,9 @@ async def cancel_booking(request: Request):
                 tool_call_id = msg["toolWithToolCallList"][0]["toolCall"].get("id")
                 data = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
 
+        if not data:
+            return JSONResponse(status_code=200, content={"status": "ping_ok"})
+
         phonenumber = data.get("phonenumber")
         date        = data.get("date")
         start_time  = data.get("start_time")
@@ -368,6 +375,9 @@ async def reschedule_booking(request: Request):
             elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
                 tool_call_id = msg["toolWithToolCallList"][0]["toolCall"].get("id")
                 data = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
+
+        if not data:
+            return JSONResponse(status_code=200, content={"status": "ping_ok"})
 
         phonenumber   = data.get("phonenumber")
         old_date      = data.get("old_date")
