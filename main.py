@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 import hubspot
 from hubspot.crm.contacts import SimplePublicObjectInput, ApiException
 from hubspot.crm.contacts.api import basic_api, search_api
-from hubspot.crm.contacts.models import Filter, FilterGroup, PublicObjectSearchRequest
+from hubspot.crm.contacts.models import Filter, FilterGroup, PublicObjectSearchRequest, SimplePublicObjectInputForCreate
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -142,15 +142,35 @@ def sync_hubspot_contact(booking: BookingRequest) -> str:
             public_object_search_request=search_req
         )
 
+        # HubSpot enum mapping for sport_preference
+        sport = ""
+        bs = booking.service.lower()
+        if "cricket" in bs: sport = "cricket"
+        elif "golf" in bs: sport = "golf"
+        elif "soccer" in bs: sport = "soccer"
+        elif "tennis" in bs: sport = "tennis"
+
+        # HubSpot dates require midnight UTC timestamp in milliseconds
+        from datetime import timezone
+        hubspot_date = ""
+        if booking.date:
+            try:
+                dt = datetime.strptime(booking.date, "%d-%b-%Y")
+                dt = dt.replace(tzinfo=timezone.utc)
+                hubspot_date = str(int(dt.timestamp() * 1000))
+            except Exception:
+                pass
+
         properties = {
-            "firstname":       booking.name,
-            "phone":           booking.phonenumber,
-            "email":           booking.email or "",
-            "hs_lead_status":  "CONNECTED",
-            # Custom properties (set these up in HubSpot)
-            "last_visit_date": booking.date,
-            "sport_preference": booking.service,
+            "firstname": booking.name,
+            "phone": booking.phonenumber,
+            "email": booking.email or f"{booking.phonenumber}@noemail.com",
+            "hs_lead_status": "CONNECTED",
         }
+        if sport:
+            properties["sport_preference"] = sport
+        if hubspot_date:
+            properties["last_visit_date"] = hubspot_date
 
         if results.total > 0:
             # UPDATE existing contact
@@ -161,9 +181,9 @@ def sync_hubspot_contact(booking: BookingRequest) -> str:
             )
             return "existing"
         else:
-            # CREATE new contact
+            # Create a brand new contact
             client.crm.contacts.basic_api.create(
-                simple_public_object_input=SimplePublicObjectInput(properties=properties)
+                simple_public_object_input_for_create=SimplePublicObjectInputForCreate(properties=properties)
             )
             return "new"
 
