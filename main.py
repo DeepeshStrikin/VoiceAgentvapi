@@ -23,7 +23,7 @@ app = FastAPI(title="Strikin Booking API")
 # ─────────────────────────────────────────────
 # CONFIG — Fill these with your actual values
 # ─────────────────────────────────────────────
-GOOGLE_SHEET_NAME    = "Strikin Bookings"          # Your Google Sheet name
+GOOGLE_SHEET_URL     = "https://docs.google.com/spreadsheets/d/1iuSlA67K2ZJz4hIbJZf-uYQC4w9VYQH7bIndMT0IlAQ/edit" # Your Google Sheet URL
 HUBSPOT_API_KEY      = os.getenv("HUBSPOT_API_KEY") # From .env file
 GMAIL_SENDER         = os.getenv("GMAIL_SENDER")    # Your Gmail address
 GMAIL_PASSWORD       = os.getenv("GMAIL_PASSWORD")  # Gmail app password
@@ -64,7 +64,7 @@ def get_sheet():
         creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
         
     client = gspread.authorize(creds)
-    return client.open(GOOGLE_SHEET_NAME).sheet1
+    return client.open_by_url(GOOGLE_SHEET_URL).sheet1
 
 
 # ─────────────────────────────────────────────
