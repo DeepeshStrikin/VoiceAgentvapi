@@ -14,6 +14,10 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import os
 import json
+from dotenv import load_dotenv
+
+# Load secret variables from the local .env file
+load_dotenv()
 
 # ─────────────────────────────────────────────
 # APP SETUP
@@ -331,6 +335,16 @@ async def cancel_booking(request: Request):
         phonenumber = data.get("phonenumber")
         date        = data.get("date")
         start_time  = data.get("start_time")
+        
+        # ── Auto convert today/tomorrow to real date ──
+        from datetime import timedelta
+        today_str    = datetime.now().strftime("%d-%b-%Y")
+        tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
+
+        if date and date.lower().strip() == "today":
+            date = today_str
+        elif date and date.lower().strip() == "tomorrow":
+            date = tomorrow_str
 
         sheet   = get_sheet()
         records = sheet.get_all_records()
@@ -387,6 +401,21 @@ async def reschedule_booking(request: Request):
         new_date      = data.get("new_date")
         new_start     = data.get("new_start_time")
         new_end       = data.get("new_end_time")
+
+        # ── Auto convert today/tomorrow to real date ──
+        from datetime import timedelta
+        today_str    = datetime.now().strftime("%d-%b-%Y")
+        tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
+
+        if old_date and old_date.lower().strip() == "today":
+            old_date = today_str
+        elif old_date and old_date.lower().strip() == "tomorrow":
+            old_date = tomorrow_str
+            
+        if new_date and new_date.lower().strip() == "today":
+            new_date = today_str
+        elif new_date and new_date.lower().strip() == "tomorrow":
+            new_date = tomorrow_str
 
         sheet   = get_sheet()
         records = sheet.get_all_records()
