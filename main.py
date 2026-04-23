@@ -226,15 +226,17 @@ Team Strikin
 async def save_booking(request: Request):
     try:
         raw_data = await request.json()
-        print("VAPI BODY /save_booking:", json.dumps(raw_data, indent=2))
         
-        # Extract arguments from Vapi wrapper if present
+        # Extract arguments and handle Vapi wrapper
         args = raw_data
+        tool_call_id = None
         if "message" in raw_data:
             msg = raw_data["message"]
             if "toolCalls" in msg and len(msg["toolCalls"]) > 0:
+                tool_call_id = msg["toolCalls"][0].get("id")
                 args = msg["toolCalls"][0]["function"]["arguments"]
             elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
+                tool_call_id = msg["toolWithToolCallList"][0]["toolCall"].get("id")
                 args = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
 
         # Parse into our Pydantic model to validate
@@ -283,17 +285,19 @@ async def save_booking(request: Request):
         # 5. Send confirmation email
         send_confirmation_email(booking, customer_type)
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status":        "success",
-                "message":       f"Booking confirmed for {booking.name} on {booking.date} at {booking.start_time}.",
-                "customer_type": customer_type
-            }
-        )
+        response_data = {
+            "status":        "success",
+            "message":       f"Booking confirmed for {booking.name} on {booking.date} at {booking.start_time}.",
+            "customer_type": customer_type
+        }
+        
+        if tool_call_id:
+            return JSONResponse(status_code=200, content={"results": [{"toolCallId": tool_call_id, "result": response_data}]})
+        return JSONResponse(status_code=200, content=response_data)
 
     except Exception as e:
-        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -304,14 +308,16 @@ async def save_booking(request: Request):
 async def cancel_booking(request: Request):
     try:
         raw_data = await request.json()
-        print("VAPI BODY /cancel_booking:", json.dumps(raw_data, indent=2))
         
         data = raw_data
+        tool_call_id = None
         if "message" in raw_data:
             msg = raw_data["message"]
             if "toolCalls" in msg and len(msg["toolCalls"]) > 0:
+                tool_call_id = msg["toolCalls"][0].get("id")
                 data = msg["toolCalls"][0]["function"]["arguments"]
             elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
+                tool_call_id = msg["toolWithToolCallList"][0]["toolCall"].get("id")
                 data = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
 
         phonenumber = data.get("phonenumber")
@@ -328,17 +334,19 @@ async def cancel_booking(request: Request):
                 str(row.get("start_time", "")) == str(start_time)
             ):
                 sheet.delete_rows(i + 2)  # +2 because row 1 is header
-                return JSONResponse(
-                    status_code=200,
-                    content={"status": "cancelled", "message": "Your booking has been cancelled."}
-                )
+                response_data = {"status": "cancelled", "message": "Your booking has been cancelled."}
+                if tool_call_id:
+                    return JSONResponse(status_code=200, content={"results": [{"toolCallId": tool_call_id, "result": response_data}]})
+                return JSONResponse(status_code=200, content=response_data)
 
-        return JSONResponse(
-            status_code=200,
-            content={"status": "not_found", "message": "No booking found with those details."}
-        )
+        response_data = {"status": "not_found", "message": "No booking found with those details."}
+        if tool_call_id:
+            return JSONResponse(status_code=200, content={"results": [{"toolCallId": tool_call_id, "result": response_data}]})
+        return JSONResponse(status_code=200, content=response_data)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -349,14 +357,16 @@ async def cancel_booking(request: Request):
 async def reschedule_booking(request: Request):
     try:
         raw_data = await request.json()
-        print("VAPI BODY /reschedule_booking:", json.dumps(raw_data, indent=2))
         
         data = raw_data
+        tool_call_id = None
         if "message" in raw_data:
             msg = raw_data["message"]
             if "toolCalls" in msg and len(msg["toolCalls"]) > 0:
+                tool_call_id = msg["toolCalls"][0].get("id")
                 data = msg["toolCalls"][0]["function"]["arguments"]
             elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
+                tool_call_id = msg["toolWithToolCallList"][0]["toolCall"].get("id")
                 data = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
 
         phonenumber   = data.get("phonenumber")
@@ -381,20 +391,19 @@ async def reschedule_booking(request: Request):
                 sheet.update_cell(row_num, 9, new_start)
                 sheet.update_cell(row_num, 10, new_end)
 
-                return JSONResponse(
-                    status_code=200,
-                    content={
-                        "status":  "rescheduled",
-                        "message": f"Your booking has been moved to {new_date} at {new_start}."
-                    }
-                )
+                response_data = {"status": "rescheduled", "message": f"Your booking has been moved to {new_date} at {new_start}."}
+                if tool_call_id:
+                    return JSONResponse(status_code=200, content={"results": [{"toolCallId": tool_call_id, "result": response_data}]})
+                return JSONResponse(status_code=200, content=response_data)
 
-        return JSONResponse(
-            status_code=200,
-            content={"status": "not_found", "message": "Original booking not found."}
-        )
+        response_data = {"status": "not_found", "message": "Original booking not found."}
+        if tool_call_id:
+            return JSONResponse(status_code=200, content={"results": [{"toolCallId": tool_call_id, "result": response_data}]})
+        return JSONResponse(status_code=200, content=response_data)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
