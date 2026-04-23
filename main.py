@@ -114,7 +114,8 @@ def save_to_sheet(sheet, booking: BookingRequest):
         booking.date,
         booking.start_time,
         booking.end_time,
-        datetime.now().strftime("%d-%b-%Y %H:%M")  # Booking created timestamp
+        datetime.now().strftime("%d-%b-%Y %H:%M"),  # Booking created timestamp
+        "CONFIRMED" # Status
     ])
 
 
@@ -340,7 +341,8 @@ async def cancel_booking(request: Request):
                 str(row.get("date", ""))       == str(date)        and
                 str(row.get("start_time", "")) == str(start_time)
             ):
-                sheet.delete_rows(i + 2)  # +2 because row 1 is header
+                row_num = i + 2
+                sheet.update_cell(row_num, 11, "CANCELLED")  # Update status to CANCELLED instead of deleting
                 response_data = {"status": "cancelled", "message": "Your booking has been cancelled."}
                 if tool_call_id:
                     return JSONResponse(status_code=200, content={"results": [{"toolCallId": tool_call_id, "result": response_data}]})
@@ -396,10 +398,11 @@ async def reschedule_booking(request: Request):
                 str(row.get("start_time", "")) == str(old_start)
             ):
                 row_num = i + 2
-                # Update date, start_time, end_time columns (F=7, G=8, H=9)
-                sheet.update_cell(row_num, 8, new_date)
-                sheet.update_cell(row_num, 9, new_start)
-                sheet.update_cell(row_num, 10, new_end)
+                # Update date, start_time, end_time, and status columns (7, 8, 9, 11)
+                sheet.update_cell(row_num, 7, new_date)
+                sheet.update_cell(row_num, 8, new_start)
+                sheet.update_cell(row_num, 9, new_end)
+                sheet.update_cell(row_num, 11, "RESCHEDULED")
 
                 response_data = {"status": "rescheduled", "message": f"Your booking has been moved to {new_date} at {new_start}."}
                 if tool_call_id:
