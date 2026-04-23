@@ -223,8 +223,23 @@ Team Strikin
 # MAIN BOOKING ENDPOINT
 # ─────────────────────────────────────────────
 @app.post("/save_booking")
-async def save_booking(booking: BookingRequest):
+async def save_booking(request: Request):
     try:
+        raw_data = await request.json()
+        print("VAPI BODY /save_booking:", json.dumps(raw_data, indent=2))
+        
+        # Extract arguments from Vapi wrapper if present
+        args = raw_data
+        if "message" in raw_data:
+            msg = raw_data["message"]
+            if "toolCalls" in msg and len(msg["toolCalls"]) > 0:
+                args = msg["toolCalls"][0]["function"]["arguments"]
+            elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
+                args = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
+
+        # Parse into our Pydantic model to validate
+        booking = BookingRequest(**args)
+
         sheet = get_sheet()
 
         # ── Auto convert today/tomorrow to real date ──
@@ -287,12 +302,22 @@ async def save_booking(booking: BookingRequest):
 # ─────────────────────────────────────────────
 @app.post("/cancel_booking")
 async def cancel_booking(request: Request):
-    data        = await request.json()
-    phonenumber = data.get("phonenumber")
-    date        = data.get("date")
-    start_time  = data.get("start_time")
-
     try:
+        raw_data = await request.json()
+        print("VAPI BODY /cancel_booking:", json.dumps(raw_data, indent=2))
+        
+        data = raw_data
+        if "message" in raw_data:
+            msg = raw_data["message"]
+            if "toolCalls" in msg and len(msg["toolCalls"]) > 0:
+                data = msg["toolCalls"][0]["function"]["arguments"]
+            elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
+                data = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
+
+        phonenumber = data.get("phonenumber")
+        date        = data.get("date")
+        start_time  = data.get("start_time")
+
         sheet   = get_sheet()
         records = sheet.get_all_records()
 
@@ -322,15 +347,25 @@ async def cancel_booking(request: Request):
 # ─────────────────────────────────────────────
 @app.post("/reschedule_booking")
 async def reschedule_booking(request: Request):
-    data          = await request.json()
-    phonenumber   = data.get("phonenumber")
-    old_date      = data.get("old_date")
-    old_start     = data.get("old_start_time")
-    new_date      = data.get("new_date")
-    new_start     = data.get("new_start_time")
-    new_end       = data.get("new_end_time")
-
     try:
+        raw_data = await request.json()
+        print("VAPI BODY /reschedule_booking:", json.dumps(raw_data, indent=2))
+        
+        data = raw_data
+        if "message" in raw_data:
+            msg = raw_data["message"]
+            if "toolCalls" in msg and len(msg["toolCalls"]) > 0:
+                data = msg["toolCalls"][0]["function"]["arguments"]
+            elif "toolWithToolCallList" in msg and len(msg["toolWithToolCallList"]) > 0:
+                data = msg["toolWithToolCallList"][0]["toolCall"]["function"]["arguments"]
+
+        phonenumber   = data.get("phonenumber")
+        old_date      = data.get("old_date")
+        old_start     = data.get("old_start_time")
+        new_date      = data.get("new_date")
+        new_start     = data.get("new_start_time")
+        new_end       = data.get("new_end_time")
+
         sheet   = get_sheet()
         records = sheet.get_all_records()
 
