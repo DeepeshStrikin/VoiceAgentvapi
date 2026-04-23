@@ -1,0 +1,6 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+gspread==6.0.2
+google-auth==2.29.0
+hubspot-api-client==9.0.0
+python-dotenv==1.0.1
