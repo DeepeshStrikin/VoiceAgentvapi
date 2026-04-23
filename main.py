@@ -11,13 +11,36 @@ from hubspot.crm.contacts.models import Filter, FilterGroup, PublicObjectSearchR
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import json
 from dotenv import load_dotenv
 
 # Load secret variables from the local .env file
 load_dotenv()
+
+# ─────────────────────────────────────────────
+# DATE PARSER HELPER
+# ─────────────────────────────────────────────
+def parse_natural_date(date_str: str) -> str:
+    """Safely convert common phrases into DD-MMM-YYYY. Otherwise returns the original string."""
+    if not date_str: return ""
+    d_lower = date_str.lower().strip()
+    now = datetime.now()
+    
+    if d_lower == "today":
+        return now.strftime("%d-%b-%Y")
+    if d_lower == "tomorrow":
+        return (now + timedelta(days=1)).strftime("%d-%b-%Y")
+    if d_lower == "day after tomorrow":
+        return (now + timedelta(days=2)).strftime("%d-%b-%Y")
+    if d_lower in ["this weekend", "weekend", "next weekend"]:
+        # Find closest Saturday (weekday 5)
+        days_ahead = 5 - now.weekday()
+        if days_ahead <= 0: days_ahead += 7
+        return (now + timedelta(days=days_ahead)).strftime("%d-%b-%Y")
+        
+    return date_str
 
 # ─────────────────────────────────────────────
 # APP SETUP
@@ -274,14 +297,8 @@ async def save_booking(request: Request):
         sheet = get_sheet()
 
         # ── Auto convert today/tomorrow to real date ──
-        from datetime import timedelta
-        today    = datetime.now().strftime("%d-%b-%Y")
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
-
-        if booking.date.lower().strip() == "today":
-            booking.date = today
-        elif booking.date.lower().strip() == "tomorrow":
-            booking.date = tomorrow
+        if booking.date:
+            booking.date = parse_natural_date(booking.date)
 
         # 1. Check duplicate
 
@@ -357,14 +374,8 @@ async def cancel_booking(request: Request):
         start_time  = data.get("start_time")
         
         # ── Auto convert today/tomorrow to real date ──
-        from datetime import timedelta
-        today_str    = datetime.now().strftime("%d-%b-%Y")
-        tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
-
-        if date and date.lower().strip() == "today":
-            date = today_str
-        elif date and date.lower().strip() == "tomorrow":
-            date = tomorrow_str
+        if date:
+            date = parse_natural_date(date)
 
         sheet   = get_sheet()
         records = sheet.get_all_records()
@@ -423,19 +434,10 @@ async def reschedule_booking(request: Request):
         new_end       = data.get("new_end_time")
 
         # ── Auto convert today/tomorrow to real date ──
-        from datetime import timedelta
-        today_str    = datetime.now().strftime("%d-%b-%Y")
-        tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
-
-        if old_date and old_date.lower().strip() == "today":
-            old_date = today_str
-        elif old_date and old_date.lower().strip() == "tomorrow":
-            old_date = tomorrow_str
-            
-        if new_date and new_date.lower().strip() == "today":
-            new_date = today_str
-        elif new_date and new_date.lower().strip() == "tomorrow":
-            new_date = tomorrow_str
+        if old_date:
+            old_date = parse_natural_date(old_date)
+        if new_date:
+            new_date = parse_natural_date(new_date)
 
         sheet   = get_sheet()
         records = sheet.get_all_records()
