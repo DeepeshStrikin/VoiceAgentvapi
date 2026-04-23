@@ -184,10 +184,14 @@ def sync_hubspot_contact(booking: BookingRequest) -> str:
             except Exception:
                 pass
 
+        safe_email = booking.email
+        if not safe_email or "@" not in safe_email:
+            safe_email = f"{booking.phonenumber}@noemail.com"
+
         properties = {
             "firstname": booking.name,
             "phone": booking.phonenumber,
-            "email": booking.email or f"{booking.phonenumber}@noemail.com",
+            "email": safe_email,
             "hs_lead_status": "CONNECTED",
         }
         if sport:
