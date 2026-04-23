@@ -53,7 +53,16 @@ def get_sheet():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds  = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
+    
+    # Check if we are running on Railway with the JSON in an environment variable
+    google_creds_json = os.getenv("GOOGLE_CREDS_JSON")
+    if google_creds_json:
+        creds_info = json.loads(google_creds_json)
+        creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+    else:
+        # Local development fallback
+        creds = Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=scopes)
+        
     client = gspread.authorize(creds)
     return client.open(GOOGLE_SHEET_NAME).sheet1
 
